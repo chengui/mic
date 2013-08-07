@@ -221,21 +221,7 @@ def cleanup_chrootenv(chrootdir, bindmounts=None, globalmounts=()):
 ### CHROOT STUFF
 #####################################################################
 
-def cleanup_after_chroot(targettype, imgmount, tmpdir, tmpmnt):
-    if imgmount and targettype == "img":
-        imgmount.cleanup()
-
-    if tmpdir:
-        shutil.rmtree(tmpdir, ignore_errors = True)
-
-    if tmpmnt:
-        shutil.rmtree(tmpmnt, ignore_errors = True)
-
-def chroot(chrootdir, bindmounts = None, execute = "/bin/bash"):
-    def mychroot():
-        os.chroot(chrootdir)
-        os.chdir("/")
-
+def savefs_before_chroot(chrootdir, saveto = None):
     if configmgr.chroot['saveto']:
         savefs = True
         saveto = configmgr.chroot['saveto']
@@ -265,11 +251,28 @@ def chroot(chrootdir, bindmounts = None, execute = "/bin/bash"):
         else:
             msger.warning(wrnmsg)
 
+def cleanup_after_chroot(targettype, imgmount, tmpdir, tmpmnt):
+    if imgmount and targettype == "img":
+        imgmount.cleanup()
+
+    if tmpdir:
+        shutil.rmtree(tmpdir, ignore_errors = True)
+
+    if tmpmnt:
+        shutil.rmtree(tmpmnt, ignore_errors = True)
+
+def chroot(chrootdir, bindmounts = None, execute = "/bin/bash"):
+    def mychroot():
+        os.chroot(chrootdir)
+        os.chdir("/")
+
     arch = elf_arch(chrootdir)
     if arch == "arm":
         qemu_emulator = misc.setup_qemu_emulator(chrootdir, "arm")
     else:
         qemu_emulator = None
+
+    savefs_before_chroot(chrootdir, None)
 
     try:
         msger.info("Launching shell. Exit to continue.\n"
