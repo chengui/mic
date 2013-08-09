@@ -48,7 +48,7 @@ BIND_MOUNTS = (
 #####################################################################
 
 def elf_arch(chrootdir, files = ['/bin/bash', '/sbin/init']):
-
+    """ detect the architecture of an ELF file """
     mapping = {
                 "Intel 80[0-9]86": "i686",
                 "x86-64": "x86_64",
@@ -70,6 +70,7 @@ def elf_arch(chrootdir, files = ['/bin/bash', '/sbin/init']):
                               chrootdir)
 
 def global_mounts(chrootdir, bindmounts = None):
+    """ calculate all bind mount entries for global usage """
     global chroot_bindmounts
 
     def totuple(string):
@@ -121,23 +122,27 @@ def global_mounts(chrootdir, bindmounts = None):
 #####################################################################
 
 def bind_mount(chrootmounts):
+    """ perform bind mounting """
     for b in chrootmounts:
         msger.verbose("bind_mount: %s -> %s" % (b.src, b.dest))
         b.mount()
 
 def setup_resolv(chrootdir):
+    """ resolve network """
     try:
         shutil.copyfile("/etc/resolv.conf", chrootdir + "/etc/resolv.conf")
     except:
         pass
 
 def setup_mtab(chrootdir):
+    """ adjust mount table """
     mtab = "/etc/mtab"
     dstmtab = chrootdir + mtab
     if not os.path.islink(dstmtab):
         shutil.copyfile(mtab, dstmtab)
 
 def setup_chrootenv(chrootdir, bindmounts = None):
+    """ setup chroot environment """
     global chroot_lock
 
     # acquire the lock
@@ -159,11 +164,13 @@ def setup_chrootenv(chrootdir, bindmounts = None):
 ######################################################################
 
 def bind_unmount(chrootmounts):
+    """ perform bind unmounting """
     for b in reversed(chrootmounts):
         msger.verbose("bind_unmount: %s -> %s" % (b.src, b.dest))
         b.unmount()
 
 def cleanup_resolv(chrootdir):
+    """ clear resolv.conf """
     try:
         fd = open(chrootdir + "/etc/resolv.conf", "w")
         fd.truncate(0)
@@ -172,6 +179,7 @@ def cleanup_resolv(chrootdir):
         pass
 
 def kill_processes(chrootdir):
+    """ kill all processes running inside chrootdir """
     import glob
     for fp in glob.glob("/proc/*/root"):
         try:
@@ -182,10 +190,12 @@ def kill_processes(chrootdir):
             pass
 
 def cleanup_mtab(chrootdir):
+    """ remove mtab file """
     if os.path.exists(chrootdir + "/etc/mtab"):
         os.unlink(chrootdir + "/etc/mtab")
 
 def cleanup_mounts(chrootdir):
+    """ clean up all mount entries owned by chrootdir """
     umountcmd = misc.find_binary_path("umount")
     mounts = open('/proc/mounts').readlines()
     for line in reversed(mounts):
@@ -206,6 +216,7 @@ def cleanup_mounts(chrootdir):
                 msger.warning("%s is not directory or is not empty" % point)
 
 def cleanup_chrootenv(chrootdir, bindmounts=None, globalmounts=()):
+    """ clean up chroot environment """
     # kill processes
     kill_processes(chrootdir)
     # clean mtab
@@ -226,6 +237,7 @@ def cleanup_chrootenv(chrootdir, bindmounts=None, globalmounts=()):
 #####################################################################
 
 def savefs_before_chroot(chrootdir, saveto = None):
+    """ backup chrootdir to another directory before chrooting in """
     if configmgr.chroot['saveto']:
         savefs = True
         saveto = configmgr.chroot['saveto']
@@ -256,6 +268,7 @@ def savefs_before_chroot(chrootdir, saveto = None):
             msger.warning(wrnmsg)
 
 def cleanup_after_chroot(targettype, imgmount, tmpdir, tmpmnt):
+    """ clean up all temporary directories after chrooting """
     if imgmount and targettype == "img":
         imgmount.cleanup()
 
@@ -266,6 +279,7 @@ def cleanup_after_chroot(targettype, imgmount, tmpdir, tmpmnt):
         shutil.rmtree(tmpmnt, ignore_errors = True)
 
 def chroot(chrootdir, bindmounts = None, execute = "/bin/bash"):
+    """ chroot the chrootdir and execute the command"""
     def mychroot():
         os.chroot(chrootdir)
         os.chdir("/")
